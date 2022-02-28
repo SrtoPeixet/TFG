@@ -80,7 +80,7 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
             labels = labels.type(torch.LongTensor).to(device)
             outputs = CNN(images)
 
-            distance = 1-pairwise_distances(outputs.cpu().detach().numpy(), metric="cosine")
+            distance = pairwise_distances(outputs.cpu().detach().numpy(), metric="cosine")
 
             #distance = distance_matrix(outputs.cpu().detach().numpy(),outputs.cpu().detach().numpy())
             # Forward pass
