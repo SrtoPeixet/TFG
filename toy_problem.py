@@ -80,11 +80,11 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
             labels = labels.type(torch.LongTensor).to(device)
             outputs = CNN(images)
 
-            distance = pairwise_distances(outputs.cpu().detach().numpy(), metric="cosine")
+            distances = torch.cdist(outputs,outputs,p=2)
 
             #distance = distance_matrix(outputs.cpu().detach().numpy(),outputs.cpu().detach().numpy())
             # Forward pass
-            loss = criterion(distance,get_label_matrix(labels)).requires_grad_()
+            loss = criterion(distances,get_label_matrix(labels).to(device).requires_grad_())
  
             # Backward and optimize
             optimizer.zero_grad()

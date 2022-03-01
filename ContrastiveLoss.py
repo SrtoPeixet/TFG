@@ -11,12 +11,9 @@ class ContrastiveLoss(nn.Module):
     def forward(self, distances, labels):
       loss = 0 
       total = 0
-      #Paralelizar
-      distances = torch.from_numpy(distances).detach()
-      labels = torch.from_numpy(labels).detach()
       # torch
-      D_2 = torch.multiply(distances,distances).requires_grad_()
-      A = 0.5 * torch.multiply(D_2,labels).requires_grad_()
+      D_2 = torch.multiply(distances,distances)
+      A = 0.5 * torch.multiply(D_2,labels)
 
       D_margin_clipped  = (self.margin - distances).clip(min=0).requires_grad_()
       D_2_MC = torch.multiply(D_margin_clipped,D_margin_clipped).requires_grad_()
