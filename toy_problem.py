@@ -49,10 +49,10 @@ train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=64, 
                                                shuffle=True)
                                         
-img,label = train_dataset.__getitem__(np.random.randint(0,len(train_dataset)))
+#img,label = train_dataset.__getitem__(np.random.randint(0,len(train_dataset)))
 
-display_image(img)
-fig = plt.figure()
+#display_image(img)
+#fig = plt.figure()
 
 criterion = ContrastiveLoss()
 resnet18 = models.resnet18(pretrained=True)
