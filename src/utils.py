@@ -2,7 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from scipy.spatial import distance_matrix
+from sklearn.metrics.pairwise import pairwise_distances
 
 
 def display_image(img):
@@ -41,18 +41,21 @@ def get_pairs_of_closer(test_dataset,output_PATH,pairs_PATH):
     os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
     outputs = np.loadtxt(output_PATH)
-    distances = distance_matrix(outputs,outputs)
+    distances = pairwise_distances(X = outputs, metric = 'l2', n_jobs = -1)
+    print(distances)
+    #distances = distance_matrix(outputs,outputs)
     distances = np.triu(distances)
 
-    positions = get_closer_images(distances,25)
-
+    positions = get_closer_images(distances,100)
+    print(positions)
     cnt = 0
     for pos in positions:      
           fig, ax = plt.subplots(nrows=1, ncols=2)
-          img_1 = test_dataset.__getitem__(positions[cnt][0])[0]
-          img_2 = test_dataset.__getitem__(positions[cnt][1])[0]
+          img_1 = test_dataset.__getitem__(pos[0])[0]
+          img_2 = test_dataset.__getitem__(pos[1])[0]
+          print(pos[0],pos[1])
           cnt+=1
           ax[0].imshow(torch.transpose(img_1.T,0,1))
           ax[1].imshow(torch.transpose(img_2.T,0,1))
           fig.suptitle('Pairs of most closer images' + str(cnt), fontsize=16)
-          plt.savefig(pairs_PATH+"Top_" + cnt +"_most_closer_images.png")
+          plt.savefig(pairs_PATH+"Top_" + str(cnt) +"_most_closer_images.png")

@@ -107,12 +107,12 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
     return losses_list
 
 def generate_outputs(model, test_loader,device,output_PATH):
-    with open(output_PATH,'ab') as f:
+    with open(output_PATH,'w') as f:
         for i, (images, labels) in enumerate(test_loader):
             images = images.to(device)
             output = model(images)
             np.savetxt(f, output.cpu().detach().numpy())
-            f.write(b"\n")
+            f.write("\n")
             if (i+1) % 50 == 0:
                 print('Predicted Batch [{}/{}]'.format(i,len(test_loader)))
         f.close()
@@ -135,11 +135,10 @@ if(train_mode):
     losses = train(model, train_loader, optimizer, criterion, num_epochs=10, model_name='toy_model_lr_001.pt', device=device)
 
 ## EVALUATE
-
 if(eval_mode):
     model_PATH = models_PATH + 'model_001.pt'
     pairs_PATH = root_PATH + '/pairs/'
-    output_name = "outputs_lr_001_002.npy"
+    output_name = "outputs_lr_001_001.npy"
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                batch_size=64, 
                                                shuffle=False)
@@ -152,8 +151,6 @@ if(eval_mode):
     print("Output generated correctly...")
     get_pairs_of_closer(test_dataset,outputs_PATH + output_name,pairs_PATH)
     print("Pairs of closer images generated correctly...")
-
-    
 
 
 #TODO : Compute accuracy after training.
