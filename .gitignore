@@ -1,7 +1,9 @@
 # Ignore data
 img
+data
+pairs
+outputs
+__pycache__
+.vs
 attr_image.csv
-img.zip
 list_attr_img.txt
-*.png
-*.png

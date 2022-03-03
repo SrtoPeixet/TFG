@@ -16,8 +16,14 @@ from DeepFashionDataset import DeepFashionDataset
 from utils import display_image, get_label_matrix
 
 root_PATH = os.getcwd()
+print(root_PATH)
 img_dir = root_PATH + '/img/'
-
+data_PATH = root_PATH + '/data/'
+models_PATH = root_PATH + '/models/'
+outputs_PATH = root_PATH + '/outputs/'
+# Set MODE
+train_mode = False
+eval_mode = True
 
 
 
@@ -31,7 +37,7 @@ tfms = transforms.Compose([
     ])
 
 # Load the dataset with images in disk storage
-dataset = DeepFashionDataset(annotations_file='toy_dataframe.csv',
+dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
                              img_dir=root_PATH,
                              transform=tfms
                              )
@@ -50,19 +56,14 @@ train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                shuffle=True)
                                         
 #img,label = train_dataset.__getitem__(np.random.randint(0,len(train_dataset)))
-
 #display_image(img)
 #fig = plt.figure()
 
 criterion = ContrastiveLoss()
 resnet18 = models.resnet18(pretrained=True)
-
 resnet18.fc = nn.Identity() # Set last layer as Identity
 
-if torch.cuda.is_available():
-    resnet18 = resnet18.cuda()
-    criterion = criterion.cuda()
-    print("GPU ready to fight")
+
 
 def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
     CNN.train() # Set the model in train mode
@@ -100,19 +101,51 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
         print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
                        .format(epoch+1, num_epochs, i+1, total_step, loss_avg / nBatches))
         losses_list.append(loss_avg / nBatches)
-        torch.save(CNN.state_dict(), root_PATH + model_name)
+        torch.save(CNN,models_PATH + model_name)
+
           
     return losses_list
 
+def evaluate(model, test_loader,device,output_PATH):
+    with open(output_PATH,'ab') as f:
+        for i, (images, labels) in enumerate(test_loader):
+            images = images.to(device)
+            output = model(images)
+            np.savetxt(f, output.cpu().detach().numpy())
+            f.write(b"\n")
+            if (i+1) % 50 == 0:
+                print('Predicted Batch [{}/{}]'.format(i,len(test_loader)))
+        f.close()
+
+def gpu_ready_to_fight(resnet18,criterion):
+    if torch.cuda.is_available():
+        resnet18 = resnet18.cuda()
+        criterion = criterion.cuda()
+        print("GPU ready to fight")
 
 ## TRAIN 
+if(train_mode):
+    gpu_ready_to_fight(resnet18,criterion)
+    learning_rate = 0.001 # baixar
+    optimizer = torch.optim.SGD(resnet18.parameters(),lr = learning_rate, 
+                                weight_decay=1e-5, momentum=0.9)
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model = resnet18.to(device)
+    losses = train(model, train_loader, optimizer, criterion, num_epochs=10, model_name='toy_model_lr_001.pt', device=device)
+## EVALUATE
+if(eval_mode):
+    model_PATH = models_PATH + 'model_001.pt'
+    output_name = "outputs_001.npy"
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                               batch_size=64, 
+                                               shuffle=False)
+    # Set Device to CUDA
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    model = torch.load(model_PATH)    
+    gpu_ready_to_fight(model,criterion)
+    model.eval()
+    evaluate(model,test_loader,device,outputs_PATH + output_name)
+    
 
-learning_rate = 0.01 # baixar
-optimizer = torch.optim.SGD(resnet18.parameters(),lr = learning_rate, 
-                            weight_decay=1e-5, momentum=0.9)
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-model = resnet18.to(device)
 
-losses = train(model, train_loader, optimizer, criterion, num_epochs=10, model_name='toy_model.ckpt', device=device)
-
-# MAYBE WE COULD CLUSTER THE DATA AND USE THOSE CLASSES.
+#TODO : Compute accuracy after training.
