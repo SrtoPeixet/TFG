@@ -1,8 +1,13 @@
-import torch
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from sklearn.metrics.pairwise import pairwise_distances
+import torch
+from torch import nn
+from torch.nn import functional as F
+from torch.utils.data import random_split
+from torchvision import transforms
+import torchvision.models as models
 
 
 def display_image(img):
@@ -59,4 +64,60 @@ def get_pairs_of_closer(test_dataset,output_PATH,pairs_PATH):
           fig.suptitle('Pairs of most closer images' + str(cnt), fontsize=16)
           plt.savefig(pairs_PATH+"Top_" + str(cnt) +"_most_closer_images.png")
 
-    
+  def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
+    CNN.train() # Set the model in train mode
+    total_step = len(train_loader)
+    losses_list = []
+    criterion = criterion
+    # Iterate over epochs
+    for epoch in range(num_epochs):
+        # Iterate the dataset
+        loss_avg = 0
+        nBatches = 0
+        for i, (images, labels) in enumerate(train_loader):
+            # Get batch of samples and labels
+            images = images.to(device)
+            labels = labels.type(torch.LongTensor).to(device)
+            outputs = CNN(images)
+
+            distances = torch.cdist(outputs,outputs,p=2)
+
+            #distance = distance_matrix(outputs.cpu().detach().numpy(),outputs.cpu().detach().numpy())
+            # Forward pass
+            loss = criterion(distances,get_label_matrix(labels).to(device).requires_grad_())
+ 
+            # Backward and optimize
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            loss_avg += loss.cpu().item()
+            nBatches+=1
+            
+            if (i+1) % 50 == 0:
+                print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
+                       .format(epoch+1, num_epochs, i+1, total_step, loss_avg / nBatches))
+        print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
+                       .format(epoch+1, num_epochs, i+1, total_step, loss_avg / nBatches))
+        losses_list.append(loss_avg / nBatches)
+        torch.save(CNN,models_PATH + model_name)
+
+          
+    return losses_list
+
+def generate_outputs(model, test_loader,device,output_PATH):
+    with open(output_PATH,'w') as f:
+        for i, (images, labels) in enumerate(test_loader):
+            images = images.to(device)
+            output = model(images)
+            np.savetxt(f, output.cpu().detach().numpy())
+            f.write("\n")
+            if (i+1) % 50 == 0:
+                print('Predicted Batch [{}/{}]'.format(i,len(test_loader)))
+        f.close()
+
+def gpu_ready_to_fight(resnet18,criterion):
+    if torch.cuda.is_available():
+        resnet18 = resnet18.cuda()
+        criterion = criterion.cuda()
+        print("GPU ready to fight")

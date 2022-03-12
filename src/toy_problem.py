@@ -15,56 +15,6 @@ from ContrastiveLoss import ContrastiveLoss
 from DeepFashionDataset import DeepFashionDataset
 from utils import display_image, get_label_matrix, get_pairs_of_closer
 
-root_PATH = os.getcwd()
-print(root_PATH)
-img_dir = root_PATH + '/img/'
-data_PATH = root_PATH + '/data/'
-models_PATH = root_PATH + '/models/'
-outputs_PATH = root_PATH + '/outputs/'
-# Set MODE
-train_mode = False
-eval_mode = True
-
-
-
-# We have to use the internal transformations of the pretrained Resnet18
-tfms = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize(256),
-    transforms.CenterCrop(224), #Random crop
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
-# Load the dataset with images in disk storage
-dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
-                             img_dir=root_PATH,
-                             transform=tfms
-                             )
-
-# Random split manual seed with 70 20 10 (%) length
-split_size = [
-            int(0.7*len(dataset.img_labels)),
-            int(0.2*len(dataset.img_labels)),
-            int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
-            ]
-train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
-
-# TRAIN LOADER
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=64, 
-                                               shuffle=True)
-                                        
-#img,label = train_dataset.__getitem__(np.random.randint(0,len(train_dataset)))
-#display_image(img)
-#fig = plt.figure()
-
-criterion = ContrastiveLoss()
-resnet18 = models.resnet18(pretrained=True)
-resnet18.fc = nn.Identity() # Set last layer as Identity
-
-
-
 def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
     CNN.train() # Set the model in train mode
     total_step = len(train_loader)
@@ -123,9 +73,51 @@ def gpu_ready_to_fight(resnet18,criterion):
         criterion = criterion.cuda()
         print("GPU ready to fight")
 
+# Def PATHS
+root_PATH = os.getcwd()
+img_dir = root_PATH + '/img/'
+data_PATH = root_PATH + '/data/'
+models_PATH = root_PATH + '/models/'
+outputs_PATH = root_PATH + '/outputs/'
+pairs_PATH = root_PATH + '/pairs_no_transforms/'
+
+# Set MODE
+train_mode = False
+eval_mode = True
+
+
 ## TRAIN 
 
 if(train_mode):
+    # We have to use the internal transformations of the pretrained Resnet18
+    tfms = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize(256),
+        transforms.CenterCrop(224), #Random crop
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+
+    # Load the dataset with images in disk storage
+    dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
+                                img_dir=root_PATH,
+                                transform=tfms
+                                )
+
+    # Random split manual seed with 70 20 10 (%) length
+    split_size = [
+                int(0.7*len(dataset.img_labels)),
+                int(0.2*len(dataset.img_labels)),
+                int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
+                ]
+    train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
+                                            
+    criterion = ContrastiveLoss()
+    resnet18 = models.resnet18(pretrained=True)
+    resnet18.fc = nn.Identity() # Set last layer as Identity
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                               batch_size=64, 
+                                               shuffle=True)
     gpu_ready_to_fight(resnet18,criterion)
     learning_rate = 0.001 # baixar
     optimizer = torch.optim.SGD(resnet18.parameters(),lr = learning_rate, 
@@ -136,20 +128,20 @@ if(train_mode):
 
 ## EVALUATE
 if(eval_mode):
-    model_PATH = models_PATH + 'model_001.pt'
-    pairs_PATH = root_PATH + '/pairs_no_transforms/'
+    model_name =  'model_001.pt'
     output_name = "outputs_lr_001_001.npy"
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                batch_size=64, 
                                                shuffle=False)
-    # Set Device to CUDA
+    # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = torch.load(model_PATH)    
+    model = torch.load(models_PATH + model_name)    
     gpu_ready_to_fight(model,criterion)
     model.eval()
     generate_outputs(model,test_loader,device,outputs_PATH + output_name)
     print("Output generated correctly...")
 
+    # LOAD DATASET WITHOUT TRANSFORMS
     dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
                              img_dir=root_PATH)
     # Random split manual seed with 70 20 10 (%) length
