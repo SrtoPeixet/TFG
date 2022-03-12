@@ -137,7 +137,7 @@ if(train_mode):
 ## EVALUATE
 if(eval_mode):
     model_PATH = models_PATH + 'model_001.pt'
-    pairs_PATH = root_PATH + '/pairs/'
+    pairs_PATH = root_PATH + '/pairs_no_transforms/'
     output_name = "outputs_lr_001_001.npy"
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                batch_size=64, 
@@ -149,8 +149,21 @@ if(eval_mode):
     model.eval()
     generate_outputs(model,test_loader,device,outputs_PATH + output_name)
     print("Output generated correctly...")
+
+    dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
+                             img_dir=root_PATH)
+    # Random split manual seed with 70 20 10 (%) length
+    split_size = [
+                int(0.7*len(dataset.img_labels)),
+                int(0.2*len(dataset.img_labels)),
+                int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
+                ]
+    train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
+
+
     get_pairs_of_closer(test_dataset,outputs_PATH + output_name,pairs_PATH)
     print("Pairs of closer images generated correctly...")
 
 
-#TODO : Compute accuracy after training.
+#TODO : Compute accuracy after training. How ? 
+#TODO : Inverse transform pairs of images

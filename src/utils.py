@@ -53,9 +53,10 @@ def get_pairs_of_closer(test_dataset,output_PATH,pairs_PATH):
           fig, ax = plt.subplots(nrows=1, ncols=2)
           img_1 = test_dataset.__getitem__(pos[0])[0]
           img_2 = test_dataset.__getitem__(pos[1])[0]
-          print(pos[0],pos[1])
           cnt+=1
           ax[0].imshow(torch.transpose(img_1.T,0,1))
           ax[1].imshow(torch.transpose(img_2.T,0,1))
           fig.suptitle('Pairs of most closer images' + str(cnt), fontsize=16)
           plt.savefig(pairs_PATH+"Top_" + str(cnt) +"_most_closer_images.png")
+
+    
