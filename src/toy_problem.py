@@ -82,7 +82,7 @@ outputs_PATH = root_PATH + '/outputs/'
 pairs_PATH = root_PATH + '/pairs_no_transforms/'
 
 # Set MODE
-train_mode = True
+train_mode = False
 eval_mode = True
 
     # We have to use the internal transformations of the pretrained Resnet18
@@ -126,12 +126,13 @@ if(train_mode):
     with open('loses_001.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
+
 ## EVALUATE
 if(eval_mode):
     model_name =  'model_001.pt'
     output_name = "train_outputs_lr_001_001.npy"
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                batch_size=64, 
                                                shuffle=True)
     # Set Device to CUDA and load model
@@ -140,6 +141,46 @@ if(eval_mode):
     criterion = ContrastiveLoss()
     gpu_ready_to_fight(model,criterion)
     model.eval()
+
+    loss_avg = 0
+    total_step = len(test_dataset)/64
+    losses_list = []
+    nBatches = 0
+    for i, (images, labels) in enumerate(test_loader):
+            # Get batch of samples and labels
+            images = images.to(device)
+            labels = labels.type(torch.LongTensor).to(device)
+            outputs = model(images)
+
+            distances = torch.cdist(outputs,outputs,p=2)
+
+            #distance = distance_matrix(outputs.cpu().detach().numpy(),outputs.cpu().detach().numpy())
+            # Forward pass
+            loss = criterion(distances,get_label_matrix(labels).to(device).requires_grad_())
+
+            loss_avg += loss.cpu().item()
+            nBatches+=1
+            losses_list.append(loss_avg / nBatches)
+
+            if (i+1) % 5 == 0:
+                print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
+                       .format(1, 1, i+1, total_step, loss_avg / nBatches))
+   
+    
+    with open('loses_test_001.npy', 'wb') as f:
+        np.save(f, np.array(losses_list))
+
+
+
+
+
+
+
+
+
+
+    '''
+
     #generate_outputs(model,train_loader,device,outputs_PATH + output_name)
     print("Output generated correctly...")
 
@@ -202,6 +243,7 @@ if(eval_mode):
     accuracy = score / len(train_dataset)
     print("Acc: " + str(accuracy))
     print(zeros,ones)
+       '''
               
     
 
