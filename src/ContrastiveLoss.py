@@ -12,14 +12,14 @@ class ContrastiveLoss(nn.Module):
       loss = 0 
       total = 0
       # torch
-      D_2 = torch.multiply(distances,distances)
+      D_2 = torch.multiply(distances,distances) #similar
       A = 0.5 * torch.multiply(D_2,labels)
 
-      D_margin_clipped  = (self.margin - distances).clip(min=0).requires_grad_()
-      D_2_MC = torch.multiply(D_margin_clipped,D_margin_clipped).requires_grad_()
-      B = 0.5 * torch.multiply((1 - labels),D_2_MC).requires_grad_()
+      D_margin_clipped  = (self.margin - distances).clip(min=0) #dissimilar
+      D_2_MC = torch.multiply(D_margin_clipped,D_margin_clipped)
+      B = 0.5 * torch.multiply((1 - labels),D_2_MC)
 
-      loss = torch.sum(A+B).requires_grad_()
-      total = len(A) * (len(A) - 1) / 2
+      loss = torch.sum(A+B)
+      total = len(A) * len(A)
       
       return loss / total

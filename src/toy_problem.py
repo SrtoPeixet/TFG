@@ -13,7 +13,7 @@ from sklearn.metrics import pairwise_distances
 # Import from local
 from ContrastiveLoss import ContrastiveLoss
 from DeepFashionDataset import DeepFashionDataset
-from utils import display_image, get_label_matrix, get_pairs_of_closer
+from utils import display_image, get_label_matrix, get_pairs_of_closer, get_k_closer_images_to_positions
 
 def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
     CNN.train() # Set the model in train mode
@@ -82,36 +82,34 @@ outputs_PATH = root_PATH + '/outputs/'
 pairs_PATH = root_PATH + '/pairs_no_transforms/'
 
 # Set MODE
-train_mode = False
+train_mode = True
 eval_mode = True
 
-
-## TRAIN 
-
-if(train_mode):
     # We have to use the internal transformations of the pretrained Resnet18
-    tfms = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.Resize(256),
-        transforms.CenterCrop(224), #Random crop
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+tfms = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize(256),
+    transforms.CenterCrop(224), #Random crop
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
 
-    # Load the dataset with images in disk storage
-    dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
-                                img_dir=root_PATH,
-                                transform=tfms
-                                )
+# Load the dataset with images in disk storage
+dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
+                            img_dir=root_PATH,
+                            transform=tfms
+                            )
 
-    # Random split manual seed with 70 20 10 (%) length
-    split_size = [
-                int(0.7*len(dataset.img_labels)),
-                int(0.2*len(dataset.img_labels)),
-                int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
-                ]
-    train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
-                                            
+# Random split manual seed with 70 20 10 (%) length
+split_size = [
+            int(0.7*len(dataset.img_labels)),
+            int(0.2*len(dataset.img_labels)),
+            int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
+            ]
+train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
+## TRAIN 
+if(train_mode):
+
     criterion = ContrastiveLoss()
     resnet18 = models.resnet18(pretrained=True)
     resnet18.fc = nn.Identity() # Set last layer as Identity
@@ -125,23 +123,27 @@ if(train_mode):
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet18.to(device)
     losses = train(model, train_loader, optimizer, criterion, num_epochs=10, model_name='toy_model_lr_001.pt', device=device)
+    with open('loses_001.npy', 'wb') as f:
+        np.save(f, np.array(losses))
 
 ## EVALUATE
 if(eval_mode):
     model_name =  'model_001.pt'
-    output_name = "outputs_lr_001_001.npy"
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+    output_name = "train_outputs_lr_001_001.npy"
+
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=64, 
-                                               shuffle=False)
+                                               shuffle=True)
     # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = torch.load(models_PATH + model_name)    
+    model = torch.load(models_PATH + model_name)   
+    criterion = ContrastiveLoss()
     gpu_ready_to_fight(model,criterion)
     model.eval()
-    generate_outputs(model,test_loader,device,outputs_PATH + output_name)
+    #generate_outputs(model,train_loader,device,outputs_PATH + output_name)
     print("Output generated correctly...")
 
-    # LOAD DATASET WITHOUT TRANSFORMS
+     # LOAD DATASET WITHOUT TRANSFORMS
     dataset = DeepFashionDataset(annotations_file=data_PATH + 'toy_dataframe.csv',
                              img_dir=root_PATH)
     # Random split manual seed with 70 20 10 (%) length
@@ -151,10 +153,65 @@ if(eval_mode):
                 int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
                 ]
     train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
+    
+    outputs = np.loadtxt(outputs_PATH + output_name)
+    distances = pairwise_distances(X = outputs, metric = 'l2', n_jobs = -1)
+
+    score = 0
+    k=10
+    zeros = 0
+    ones  = 0
+    for i in range(len(train_dataset)):
+       image,true_label = train_dataset.__getitem__(i)
+       if true_label == 0:
+           zeros += 1
+       else:
+            ones += 1
+
+    for i in range(len(train_dataset)):
+       
+       image,true_label = train_dataset.__getitem__(i)
+  
+       positions = get_k_closer_images_to_positions(distances,i,k)
+       print("POSITONS : ", positions)
+       predicted_label = 0
+
+       fig, ax = plt.subplots(nrows=2, ncols=6)
+       img_1 = train_dataset.__getitem__(i)[0]
+       ax[0][0].imshow(torch.transpose(img_1.T,0,1))
+       cnt=0
+       loop = 0
+       for pos in positions:
+           print("LABEL KNN: ",train_dataset.__getitem__(pos)[1][0])
+           predicted_label+=train_dataset.__getitem__(pos)[1][0]/k
+
+           cnt +=1
+           img_1 = train_dataset.__getitem__(pos)[0]
+           if(cnt == 6):
+            loop+=1
+            cnt = 0
+           ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
+           plt.savefig(pairs_PATH+"Example_" + str(i) +".png")
+
+       predicted_label = round(predicted_label)
+       print("True label: ",true_label," Predicted label: ",predicted_label)
+       if true_label == predicted_label:
+           score+=1
+       if (i % 100 == 0):
+           print('Predicted {}/{}'.format(i,len(train_dataset)))
+    accuracy = score / len(train_dataset)
+    print("Acc: " + str(accuracy))
+    print(zeros,ones)
+              
+    
 
 
-    get_pairs_of_closer(test_dataset,outputs_PATH + output_name,pairs_PATH)
-    print("Pairs of closer images generated correctly...")
+   
+    #get_pairs_of_closer(test_dataset,outputs_PATH + output_name,pairs_PATH)
+    #print("Pairs of closer images generated correctly...")
+
+
+
 
 
 #TODO : Compute accuracy after training. How ? 

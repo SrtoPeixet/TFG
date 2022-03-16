@@ -1,7 +1,8 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\src"
   ],
-  "SelectedNode": "\\.gitignore",
+  "SelectedNode": "\\src\\toy_problem.py",
   "PreviewInSolutionExplorer": false
 }

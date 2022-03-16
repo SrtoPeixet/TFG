@@ -2,6 +2,7 @@
 img
 data
 pairs
+pairs_no_transforms
 outputs
 __pycache__
 .vs

@@ -47,8 +47,6 @@ def get_pairs_of_closer(test_dataset,output_PATH,pairs_PATH):
 
     outputs = np.loadtxt(output_PATH)
     distances = pairwise_distances(X = outputs, metric = 'l2', n_jobs = -1)
-    print(distances)
-    #distances = distance_matrix(outputs,outputs)
     distances = np.triu(distances)
 
     positions = get_closer_images(distances,100)
@@ -64,7 +62,25 @@ def get_pairs_of_closer(test_dataset,output_PATH,pairs_PATH):
           fig.suptitle('Pairs of most closer images' + str(cnt), fontsize=16)
           plt.savefig(pairs_PATH+"Top_" + str(cnt) +"_most_closer_images.png")
 
-  def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
+def get_k_closer_images_to_positions(distances, position,k=10):
+    '''
+    outputs_PATH : location of outputs
+    position: row of image we want to compare.
+    '''
+    
+    vector = distances[position][:]
+    vector[vector == 0] = np.inf
+
+    positions = []
+    for i in range(k):
+        val, idx = min((val, idx) for (idx, val) in enumerate(vector))
+        positions.append(idx)
+        vector[idx] = np.inf
+    return positions
+    
+    
+
+def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
     CNN.train() # Set the model in train mode
     total_step = len(train_loader)
     losses_list = []
