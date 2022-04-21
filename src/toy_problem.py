@@ -63,7 +63,7 @@ def generate_outputs(model, test_loader,device,output_PATH):
             output = model(images)
             np.savetxt(f, output.cpu().detach().numpy())
             f.write("\n")
-            if (i+1) % 50 == 0:
+            if (i+1) % 15 == 0:
                 print('Predicted Batch [{}/{}]'.format(i,len(test_loader)))
         f.close()
 
@@ -75,7 +75,7 @@ def gpu_ready_to_fight(resnet18,criterion):
 
 # Def PATHS
 root_PATH = os.getcwd()
-img_dir = root_PATH + '/img/'
+img_dir = root_PATH + '/img_cel/img_align_celeba/'
 data_PATH = root_PATH + '/data/'
 models_PATH = root_PATH + '/models/'
 outputs_PATH = root_PATH + '/outputs/' 
@@ -95,8 +95,8 @@ tfms = transforms.Compose([
     ])
 
 # Load the dataset with images in disk storage
-dataset = DeepFashionDataset(annotations_file=data_PATH + 'balanced_toy_dataframe.csv',
-                            img_dir=root_PATH,
+dataset = DeepFashionDataset(annotations_file=data_PATH + 'mustache_hat_df.csv',
+                            img_dir=img_dir,
                             transform=tfms
                             )
 
@@ -117,24 +117,24 @@ if(train_mode):
                                                batch_size=64, 
                                                shuffle=True)
     gpu_ready_to_fight(resnet18,criterion)
-    learning_rate = 0.001 # baixar
+    learning_rate = 0.1 # baixar
     optimizer = torch.optim.SGD(resnet18.parameters(),lr = learning_rate, 
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet18.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=30 , model_name='toy_model_100_lr_001.pt', device=device)
-    with open('loses__100_001.npy', 'wb') as f:
+    losses = train(model, train_loader, optimizer, criterion, num_epochs=30 , model_name='mustache_hat.pt', device=device)
+    with open('mustache_hat_loses_train.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 
 ## EVALUATE
 if(eval_mode):
-    model_name =  'toy_model_100_lr_001.pt'
-    output_name = "outputs_test_100_lr_001_001.npy"
+    model_name =  'mustache_hat.pt'
+    output_name = "outputs_mustache_hat.npy"
 
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                batch_size=64, 
-                                               shuffle=True)
+                                               shuffle=False)
     # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = torch.load(models_PATH + model_name)   
@@ -164,12 +164,12 @@ if(eval_mode):
             nBatches+=1
             losses_list.append(loss_avg / nBatches)
 
-            if (i+1) % 5 == 0:
+            if (i+1) % 1 == 0:
                 print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
                        .format(1, 1, i+1, total_step, loss_avg / nBatches))
    
     
-    with open('loses_test_100_001.npy', 'wb') as f:
+    with open('mustache_hat_loses_test.npy', 'wb') as f:
         np.save(f, np.array(losses_list))
 
     '''
@@ -178,8 +178,8 @@ if(eval_mode):
     print("Output generated correctly...")
 
     # LOAD DATASET WITHOUT TRANSFORMS
-    dataset = DeepFashionDataset(annotations_file=data_PATH + 'balanced_toy_dataframe.csv',
-                             img_dir=root_PATH)
+    dataset = DeepFashionDataset(annotations_file=data_PATH + 'mustache_hat_df.csv',
+                             img_dir=img_dir)
     # Random split manual seed with 70 20 10 (%) length
     split_size = [
                 int(0.7*len(dataset.img_labels)),
@@ -203,23 +203,25 @@ if(eval_mode):
        predicted_label = 0
 
        fig, ax = plt.subplots(nrows=2, ncols=6)
-       img_1 = test_dataset.__getitem__(i)[0]
+       img_1,label = test_dataset.__getitem__(i)
 
        #ax[0][0].imshow(torch.transpose(img_1.T,0,1))
-       #cnt=0
-       #loop = 0
+       #ax[0][0].set_xlabel(label) 
+       cnt=0
+       loop = 0
        for pos in positions:
            print("LABEL KNN: ",test_dataset.__getitem__(pos)[1][0])
            predicted_label+=test_dataset.__getitem__(pos)[1][0]/k
-           '''
+           
            cnt +=1
-           img_1 = test_dataset.__getitem__(pos)[0]
+           img_1,label = test_dataset.__getitem__(pos)
            if(cnt == 6):
             loop+=1
             cnt = 0
-           ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
-           plt.savefig(pairs_PATH+"Example_" + str(i) +".png")
-           '''
+           #ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
+           #ax[0 + loop][cnt].set_xlabel(label) 
+           #plt.savefig(pairs_PATH+"Example_" + str(i) +".png")
+           
        predicted_label = round(predicted_label)
        print("True label: ",true_label," Predicted label: ",predicted_label)
        if true_label == predicted_label:
@@ -229,7 +231,7 @@ if(eval_mode):
     accuracy = score / len(test_dataset)
     print("Acc: " + str(accuracy))
     print(zeros,ones)
-     
+    
               
     
 
