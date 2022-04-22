@@ -88,14 +88,15 @@ eval_mode = True
     # We have to use the internal transformations of the pretrained Resnet18
 tfms = transforms.Compose([
     transforms.ToPILImage(),
-    transforms.Resize(256),
-    transforms.RandomCrop(224), #Random crop
+    transforms.Resize(128),
+    transforms.RandomCrop(112), #Random crop
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+#Change transforms during testing
 
 # Load the dataset with images in disk storage
-dataset = DeepFashionDataset(annotations_file=data_PATH + 'mustache_hat_df.csv',
+dataset = DeepFashionDataset(annotations_file=data_PATH + 'blond_bald_df.csv',
                             img_dir=img_dir,
                             transform=tfms
                             )
@@ -122,15 +123,29 @@ if(train_mode):
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet18.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=30 , model_name='mustache_hat.pt', device=device)
-    with open('mustache_hat_loses_train.npy', 'wb') as f:
+    losses = train(model, train_loader, optimizer, criterion, num_epochs=30 , model_name='blond_bald.pt', device=device)
+    with open('blond_bald_loses_train.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 
 ## EVALUATE
 if(eval_mode):
-    model_name =  'mustache_hat.pt'
-    output_name = "outputs_mustache_hat.npy"
+    tfms = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize(128),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    #Change transforms during testing
+
+    # Load the dataset with images in disk storage
+    dataset = DeepFashionDataset(annotations_file=data_PATH + 'blond_bald_df.csv',
+                                img_dir=img_dir,
+                                transform=tfms
+                                )
+
+    model_name =  'blond_bald.pt'
+    output_name = "outputs_blond_bald.npy"
 
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                                batch_size=64, 
@@ -169,7 +184,7 @@ if(eval_mode):
                        .format(1, 1, i+1, total_step, loss_avg / nBatches))
    
     
-    with open('mustache_hat_loses_test.npy', 'wb') as f:
+    with open('blond_bald_loses_test.npy', 'wb') as f:
         np.save(f, np.array(losses_list))
 
     '''
@@ -178,7 +193,7 @@ if(eval_mode):
     print("Output generated correctly...")
 
     # LOAD DATASET WITHOUT TRANSFORMS
-    dataset = DeepFashionDataset(annotations_file=data_PATH + 'mustache_hat_df.csv',
+    dataset = DeepFashionDataset(annotations_file=data_PATH + 'blond_bald_df.csv',
                              img_dir=img_dir)
     # Random split manual seed with 70 20 10 (%) length
     split_size = [
@@ -205,8 +220,8 @@ if(eval_mode):
        fig, ax = plt.subplots(nrows=2, ncols=6)
        img_1,label = test_dataset.__getitem__(i)
 
-       #ax[0][0].imshow(torch.transpose(img_1.T,0,1))
-       #ax[0][0].set_xlabel(label) 
+       ax[0][0].imshow(torch.transpose(img_1.T,0,1))
+       ax[0][0].set_xlabel(label) 
        cnt=0
        loop = 0
        for pos in positions:
@@ -218,7 +233,7 @@ if(eval_mode):
            if(cnt == 6):
             loop+=1
             cnt = 0
-           #ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
+           ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
            #ax[0 + loop][cnt].set_xlabel(label) 
            #plt.savefig(pairs_PATH+"Example_" + str(i) +".png")
            
