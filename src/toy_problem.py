@@ -44,7 +44,7 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
 
             loss_avg += loss.cpu().item()
             nBatches+=1
-            
+           
             if (i+1) % 50 == 0:
                 print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
                        .format(epoch+1, num_epochs, i+1, total_step, loss_avg / nBatches))
@@ -93,7 +93,6 @@ tfms = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-#Change transforms during testing
 
 # Load the dataset with images in disk storage
 dataset = DeepFashionDataset(annotations_file=data_PATH + 'blond_bald_df.csv',
@@ -246,17 +245,9 @@ if(eval_mode):
     accuracy = score / len(test_dataset)
     print("Acc: " + str(accuracy))
     print(zeros,ones)
-    
-              
-    
-
-
-   
+      
     #get_pairs_of_closer(test_dataset,outputs_PATH + output_name,pairs_PATH)
     #print("Pairs of closer images generated correctly...")
-
-
-
 
 
 #TODO : Compute accuracy after training. How ? 

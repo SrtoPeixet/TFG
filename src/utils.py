@@ -26,6 +26,34 @@ def get_label_matrix(labels):
       else:
         lab_mat[i][j] = 0
   return lab_mat
+def compute_similarities(labels):
+    cos = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+    similarities = torch.empty(len(labels),len(labels))
+    i = 0
+    for row in labels:
+        j = 0
+        for row_2 in labels:
+            if(i >= j):
+                sim =  cos(row,row_2)
+                similarities[i][j] = sim
+                similarities[j][i] = sim
+            j+=1
+        i+=1
+    return similarities
+
+def get_triplet_permutation(size,anchor_permutation=None):
+    
+    permutation = []
+    if anchor_permutation:
+
+        return
+    else: 
+        for i in range(size):
+
+
+            permutation[i] = random_val
+
+
 
 def get_closer_images(distances,k):
   '''
@@ -78,7 +106,15 @@ def get_k_closer_images_to_positions(distances, position,k=10):
         vector[idx] = np.inf
     return positions
     
-    
+def generate_all_triplets(size=64):
+    result = []
+    for i in range(size):
+      for j in range(size):
+        for z in range(size):
+          if ( (i != j) & (i!= z) & (z!= j)):
+            A = [i,j,z]
+            result.append(A)
+    return result
 
 def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.ckpt', device='cpu'):
     CNN.train() # Set the model in train mode
