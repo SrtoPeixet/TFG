@@ -1,0 +1,17 @@
+1. Classifier de foto a vecotr de label para comparar los resultados
+2. Mi objetivo no es detectar los atributos -> Los usuo par aprender una similaridad entre personas. 
+Fer clustering amb els outputs. Preguntar como. 
+3. Resnet-34 més gran
+4. Curriculum learning
+5. Hard triplets
+
+
+Intro -> Motivació, context, deep learning
+Background, Related Work -> Base partiendo de ML
+Metodología -> 
+Experimentació -> Preliminary Experiments, 
+Conclusions
+Future Works
+
+
+Planning Escriptura

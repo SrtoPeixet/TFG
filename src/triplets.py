@@ -10,10 +10,11 @@ from torchvision import transforms
 import torchvision.models as models
 # Sklearn imports 
 from sklearn.metrics import pairwise_distances
+from sklearn.metrics.pairwise import cosine_similarity
 # Import from local
 from TripletLoss import TripletLoss
 from DeepFashionDataset import DeepFashionDataset
-from utils import compute_similarities, display_image, get_label_matrix, get_pairs_of_closer, get_k_closer_images_to_positions, generate_all_triplets
+from utils import compute_similarities, display_image, get_label_matrix, get_pairs_of_closer, get_k_closer_images_to_positions, generate_all_triplets, truncate_label
 import random
 
 def generate_outputs(model, test_loader,device,output_PATH):
@@ -118,26 +119,26 @@ train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, gener
 if(train_mode):
 
     criterion = TripletLoss()
-    resnet18 = models.resnet18(pretrained=True)
-    resnet18.fc = nn.Identity() # Set last layer as Identity
+    resnet34 = models.resnet34(pretrained=True)
+    resnet34.fc = nn.Identity() # Set last layer as Identity
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=64, 
                                                shuffle=True)
 
-    gpu_ready_to_fight(resnet18,criterion)
+    gpu_ready_to_fight(resnet34,criterion)
     learning_rate = 0.1 # baixar
-    optimizer = torch.optim.SGD(resnet18.parameters(),lr = learning_rate, 
+    optimizer = torch.optim.SGD(resnet34.parameters(),lr = learning_rate, 
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = resnet18.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=15 , model_name='triplets.pt', device=device)
-    with open('triplets_loss.npy', 'wb') as f:
+    model = resnet34.to(device)
+    losses = train(model, train_loader, optimizer, criterion, num_epochs=15 , model_name='triplets_RESNET34.pt', device=device)
+    with open('triplets_loss_RESNET34.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 if(eval_mode):
 
-    model_name =  'triplets.pt'
-    output_name = "triplets_output_001.npy"
+    model_name =  'triplets_RESNET34.pt'
+    output_name = "triplets_RESNET34_train_output_001.txt"
 
     # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -162,18 +163,18 @@ if(eval_mode):
                 int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
                 ]
     train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=64, 
                                                shuffle=False)
     
-    #generate_outputs(model,test_loader,device,outputs_PATH + output_name)
+    #generate_outputs(model,train_loader,device,outputs_PATH + output_name)
+    '''
     print("Output generated correctly...")
     outputs = np.loadtxt(outputs_PATH + output_name)
-    distances = pairwise_distances(X = outputs, metric = 'l2', n_jobs = -1)
-
-    score = 0
+    distances = pairwise_distances(X = outputs[:5001], metric = 'l2', n_jobs = -1)
     k=10
-    # LOAD DATASET WITHOUT TRANSFORMS 
+    '''
+   # LOAD DATASET WITHOUT TRANSFORMS 
     dataset = DeepFashionDataset(annotations_file=data_PATH + 'list_attr_celeba.csv',
                              img_dir=img_dir)
     # Random split manual seed with 70 20 10 (%) length
@@ -183,34 +184,96 @@ if(eval_mode):
                 int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
                 ]
     train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
- 
-    for i in range(len(test_dataset)):
+    acc = 0 
+    
+    cluster_PATH = root_PATH + '/clusters/cluster1/'
+    cluster = [  1,   7,  20,  28,  33,  35,  68,  80,  87,  93, 101, 107, 113,
+            153, 223, 231, 248, 255, 260, 261, 278, 280, 296, 303, 320, 321,
+            323, 329, 342, 350, 356, 378, 381, 388, 397, 429, 447, 448, 475,
+            491, 495, 508, 519, 521, 526, 530, 531, 534, 537, 540, 542, 547,
+            551, 557, 560, 574, 581, 585, 600, 605, 612, 615, 652, 654, 661,
+            671, 681, 698, 707, 709, 720, 733, 734, 735, 744, 750, 776, 778,
+            782, 789, 791, 803, 806, 808, 854, 862, 865, 869, 890, 891, 894,
+            897, 904, 913, 930, 935, 943, 946, 957, 971]
+    for c in cluster:
+        img,label = test_dataset.__getitem__(c)
+        plt.imshow(torch.transpose(img.T,0,1))
+        plt.savefig(cluster_PATH + str(c) + '.png')
+
+  
+
+
+
+
+
+
+
+    for i in range(5001):
        
-       image,true_label = test_dataset.__getitem__(i)
+       image,true_label = train_dataset.__getitem__(i)
   
        positions = get_k_closer_images_to_positions(distances,i,k)
-       print("POSITONS : ", positions)
-       predicted_label = 0
+       #print("POSITONS : ", positions)
 
-       fig, ax = plt.subplots(nrows=2, ncols=6)
-       img_1,label = test_dataset.__getitem__(i)
+       #fig, ax = plt.subplots(nrows=2, ncols=6)
+       img_1,GT_label = train_dataset.__getitem__(i)
 
-       ax[0][0].imshow(torch.transpose(img_1.T,0,1))
-       ax[0][0].set_xlabel(label) 
+       #ax[0][0].imshow(torch.transpose(img_1.T,0,1))
+       #ax[0][0].set_xlabel(label) 
        cnt=0
        loop = 0
        for pos in positions:
+           img_1,label = train_dataset.__getitem__(pos)
+           if cnt == 0:
+               predicted_label=label
+           else:
+               predicted_label += label
            cnt +=1
-           img_1,label = test_dataset.__getitem__(pos)
            if(cnt == 6):
+            predicted_label = predicted_label.astype(float) / k
+            predicted_label = [truncate_label(label) for label in predicted_label]
+            acc += cosine_similarity(GT_label.astype(int).reshape(1,-1),np.array(predicted_label).reshape(1,-1))
             loop+=1
             cnt = 0
-           ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
-           plt.savefig(pairs_PATH+"CLOSER_TO_" + str(i) +".png")
-    
-       print("True label: ",true_label," Predicted label: ",predicted_label)
+            #print("True label: ",GT_label," Predicted label: ",predicted_label)
+           #ax[0 + loop][cnt].imshow(torch.transpose(img_1.T,0,1))
+           #plt.savefig(pairs_PATH+"CLOSER_TO_" + str(i) +".png
        if (i % 100 == 0):
-           print('Predicted {}/{}'.format(i,len(test_dataset)))
-    accuracy = score / len(test_dataset)
-    print("Acc: " + str(accuracy))
-    print(zeros,ones)
+           print('Predicted {}/{}'.format(i,len(train_dataset)))
+       if (i % 1000 == 0):
+           print('Acc {}%'.format(acc/(i+1)))
+    acc = acc / len(train_dataset)
+    print("Acc: " + str(acc))
+    '''
+    loss_avg = 0
+    total_step = len(test_dataset)/64
+    losses_list = []
+    nBatches = 0
+    for i, (images, labels) in enumerate(test_loader):
+            # Get batch of samples and labels
+            images = images.to(device)
+            labels = labels.type(torch.LongTensor).to(device)
+            outputs = model(images)
+
+            distances = torch.cdist(outputs,outputs,p=2).requires_grad_()
+
+            #distance = distance_matrix(outputs.cpu().detach().numpy(),outputs.cpu().detach().numpy())
+            # Forward pass
+            triplets = generate_all_triplets(size=len(outputs))
+            similarities = compute_similarities(labels.float())
+            permutations = random.sample(triplets,len(outputs))
+            loss = criterion(torch.multiply(distances,distances),similarities, permutations)
+
+            loss_avg += loss.cpu().item()
+            nBatches+=1
+            losses_list.append(loss_avg / nBatches)
+
+            if (i+1) % 1 == 0:
+                print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
+                       .format(1, 1, i+1, total_step, loss_avg / nBatches))
+   
+    
+    with open('triplets_RESNET34_test_loss.npy', 'wb') as f:
+        np.save(f, np.array(losses_list))
+    '''
+

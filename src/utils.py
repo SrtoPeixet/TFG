@@ -162,6 +162,8 @@ def generate_outputs(model, test_loader,device,output_PATH):
         for i, (images, labels) in enumerate(test_loader):
             images = images.to(device)
             output = model(images)
+            
+            
             np.savetxt(f, output.cpu().detach().numpy())
             f.write("\n")
             if (i+1) % 50 == 0:
@@ -173,3 +175,9 @@ def gpu_ready_to_fight(resnet18,criterion):
         resnet18 = resnet18.cuda()
         criterion = criterion.cuda()
         print("GPU ready to fight")
+
+def truncate_label(label):
+    if label < 0:
+        return -1
+    else:
+        return 1
