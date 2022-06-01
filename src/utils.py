@@ -97,7 +97,7 @@ def get_k_closer_images_to_positions(distances, position,k=10):
     '''
     
     vector = distances[position][:]
-    vector[vector == 0] = np.inf
+    vector[vector <1e-15] = np.inf
 
     positions = []
     for i in range(k):

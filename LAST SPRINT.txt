@@ -1,0 +1,21 @@
+RESNET
+
+resnet 50 -> Trainning 24h, testing me peta el PC.
+
+
+MULTILABEL
+
+Resnets + sigmoids + linnear 40 classes + dropout 0.2 
+criterion = BCE Loss
+
+EVALUATION: 
+{'micro/precision': 0.8549786103229251,
+ 'micro/recall': 0.7520877368331941,
+ 'micro/f1': 0.8002394290894722, 
+'macro/precision': 0.7839864581939515,
+ 'macro/recall': 0.6718184939130865, 
+'macro/f1': 0.7106956179566091,
+
+ 'samples/precision': 0.850383208666545, 
+'samples/recall': 0.7459080434979759,
+'samples/f1': 0.7821262975181124}
