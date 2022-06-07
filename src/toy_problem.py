@@ -82,8 +82,8 @@ outputs_PATH = root_PATH + '/outputs/'
 pairs_PATH = root_PATH + '/pairs_no_transforms/'
 
 # Set MODE
-train_mode = False
-eval_mode = True
+train_mode = True
+eval_mode = False
 
     # We have to use the internal transformations of the pretrained Resnet18
 tfms = transforms.Compose([
@@ -113,7 +113,7 @@ if(train_mode):
     criterion = ContrastiveLoss()
     resnet18 = models.resnet18(pretrained=True)
     resnet18.fc = nn.Identity() # Set last layer as Identity
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+    val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=64, 
                                                shuffle=True)
     gpu_ready_to_fight(resnet18,criterion)
@@ -122,8 +122,8 @@ if(train_mode):
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet18.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=30 , model_name='blond_bald.pt', device=device)
-    with open('blond_bald_loses_train.npy', 'wb') as f:
+    losses = train(model, val_loader, optimizer, criterion, num_epochs=30 , model_name='blond_bald.pt', device=device)
+    with open('val_toyproblem_loses_train.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 

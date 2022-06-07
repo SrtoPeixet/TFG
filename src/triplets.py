@@ -74,9 +74,9 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
           
     return losses_list
 
-def gpu_ready_to_fight(resnet18,criterion):
+def gpu_ready_to_fight(resnet50,criterion):
     if torch.cuda.is_available():
-        resnet18 = resnet18.cuda()
+        resnet50 = resnet50.cuda()
         criterion = criterion.cuda()
         print("GPU ready to fight")
 # Def PATHS
@@ -88,11 +88,11 @@ outputs_PATH = root_PATH + '/outputs/'
 pairs_PATH = root_PATH + '/closerTriplets/'
 
 # Set MODE
-train_mode = False
+train_mode = True
 eval_mode = False
-cluster_mode = True
-'''
-    # We have to use the internal transformations of the pretrained Resnet18
+cluster_mode = False
+
+    # We have to use the internal transformations of the pretrained resnet50
 tfms = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize(128),
@@ -114,7 +114,7 @@ split_size = [
             int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
             ]
 train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
-'''
+
 
 
 if(train_mode):
@@ -122,7 +122,7 @@ if(train_mode):
     criterion = TripletLoss()
     resnet50 = models.resnet50(pretrained=True)
     resnet50.fc = nn.Identity() # Set last layer as Identity
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+    val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                                batch_size=64, 
                                                shuffle=True)
 
@@ -132,13 +132,13 @@ if(train_mode):
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = resnet50.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=15 , model_name='triplets_resnet50.pt', device=device)
-    with open('triplets_loss_resnet50.npy', 'wb') as f:
+    losses = train(model, val_loader, optimizer, criterion, num_epochs=15 , model_name='val_triplets_resnet50.pt', device=device)
+    with open('val_triplets_loss_resnet50.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 if(eval_mode):
-    model_name =  'triplets_resnet18.pt'
-    output_name = "triplets_resnet18_test_output_001.txt"
+    model_name =  'triplets_resnet50.pt'
+    output_name = "triplets_resnet50_test_output_001.txt"
 
     # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -271,8 +271,8 @@ if(eval_mode):
 
 if (cluster_mode):
     import pandas as pd
-    model_name =  'triplets_resnet18.pt'
-    output_name = "triplets_resnet18_test_output_001.txt"
+    model_name =  'triplets_resnet50.pt'
+    output_name = "triplets_resnet50_test_output_001.txt"
 
     # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')

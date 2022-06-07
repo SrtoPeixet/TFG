@@ -181,3 +181,19 @@ def truncate_label(label):
         return -1
     else:
         return 1
+
+def get_hard_triplets(similarities):
+    similarities = 1 - similarities
+    result = []
+    for i in range(len(similarities)):
+        vector = similarities[i][:]
+        vector[vector <1e-15] = np.inf
+        positions = [i]
+        val, idx = min((val, idx) for (idx, val) in enumerate(vector))
+        positions.append(idx)
+        vector[idx] = np.inf
+        val, idx = min((val, idx) for (idx, val) in enumerate(vector))
+        positions.append(idx)
+        vector[idx] = np.inf
+        result.append(positions)
+    return result

@@ -66,9 +66,9 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
           
     return losses_list
 
-def gpu_ready_to_fight(resnet34,criterion):
+def gpu_ready_to_fight(resnet18,criterion):
     if torch.cuda.is_available():
-        resnet34 = resnet34.cuda()
+        resnet18 = resnet18.cuda()
         criterion = criterion.cuda()
         print("GPU ready to fight")
 
@@ -91,15 +91,15 @@ def calculate_metrics(pred, target, threshold=0.5):
 
 
 
-class Multilabelresnet34(nn.Module):
+class Multilabelresnet18(nn.Module):
     def __init__(self, n_classes=40):
         super().__init__()
-        resnet34 = models.resnet34(pretrained=True)
-        resnet34.fc = nn.Sequential(
+        resnet18 = models.resnet18(pretrained=True)
+        resnet18.fc = nn.Sequential(
             nn.Dropout(p=0.2),
-            nn.Linear(in_features=resnet34.fc.in_features, out_features=n_classes)
+            nn.Linear(in_features=resnet18.fc.in_features, out_features=n_classes)
             )
-        self.base_model = resnet34
+        self.base_model = resnet18
         self.sigm = nn.Sigmoid()
 
     def forward(self, x):
@@ -120,10 +120,10 @@ models_PATH = root_PATH + '/models/'
 outputs_PATH = root_PATH + '/outputs/' 
 pairs_PATH = root_PATH + '/closerMulti/'
 
-# We have to use the internal transformations of the pretrained resnet34
+# We have to use the internal transformations of the pretrained resnet18
 
-train_mode = False
-eval_mode = True
+train_mode = True
+eval_mode = False
 
 if(train_mode):
 
@@ -149,13 +149,13 @@ if(train_mode):
     train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
 
 
-    model = Multilabelresnet34(40)
+    model = Multilabelresnet18(40)
     model.train()
 
 
     criterion = nn.BCELoss()
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+    val_loader = torch.utils.data.DataLoader(dataset=val_dataset,
                                                 batch_size=64, 
                                                 shuffle=True)
 
@@ -165,16 +165,16 @@ if(train_mode):
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = model.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=15 , model_name='multilabel_resnet34.pt', device=device)
-    with open('triplets_loss_multilabel_resnet34.npy', 'wb') as f:
+    losses = train(model, val_loader, optimizer, criterion, num_epochs=15 , model_name='multilabel_resnet18.pt', device=device)
+    with open('val_loss_multilabel_resnet18.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 if(eval_mode):
-    model_name =  'multilabel_resnet34.pt'
-    output_name = "triplets_loss_multilabel_resnet34_outputs_001.txt"
+    model_name =  'multilabel_resnet18.pt'
+    output_name = "triplets_loss_multilabel_resnet18_outputs_001.txt"
 
     # Set Device to CUDA and load model
-    model = Multilabelresnet34(40)
+    model = Multilabelresnet18(40)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     model = torch.load(models_PATH + model_name)   
     criterion = nn.BCELoss()
@@ -266,7 +266,7 @@ if(eval_mode):
                        .format(1, 1, i+1, total_step, loss_avg / nBatches))
 
     
-    with open('multilabel_resnet34_test_loss.npy', 'wb') as f:
+    with open('multilabel_resnet18_test_loss.npy', 'wb') as f:
         np.save(f, np.array(losses_list))
     
     

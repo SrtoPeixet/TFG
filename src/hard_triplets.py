@@ -14,7 +14,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # Import from local
 from TripletLoss import TripletLoss
 from DeepFashionDataset import DeepFashionDataset
-from utils import compute_similarities, display_image, get_label_matrix, get_pairs_of_closer, get_k_closer_images_to_positions, generate_all_triplets, truncate_label
+from utils import compute_similarities, display_image, get_label_matrix, get_pairs_of_closer, get_k_closer_images_to_positions, generate_all_triplets, truncate_label, get_hard_triplets
 import random
 
 def generate_outputs(model, test_loader,device,output_PATH):
@@ -52,9 +52,23 @@ def train(CNN, train_loader, optimizer,criterion, num_epochs, model_name='model.
             # Forward pass
             triplets = generate_all_triplets(size=len(outputs))
             similarities = compute_similarities(labels.float())
+            random_permutations = random.sample(triplets,len(outputs))
+            hard_permutations = get_hard_triplets(similarities)
+            permutations = np.concatenate((random_permutations, hard_permutations))
             permutations = random.sample(triplets,len(outputs))
             loss = criterion(torch.multiply(distances,distances),similarities, permutations)
- 
+
+            '''
+            if (epoch % 2 == 0) :
+                triplets = generate_all_triplets(size=len(outputs))
+                similarities = compute_similarities(labels.float())
+                permutations = random.sample(triplets,len(outputs))
+                loss = criterion(torch.multiply(distances,distances),similarities, permutations)
+            else:
+                similarities = compute_similarities(labels.float())
+                permutations = get_hard_triplets(similarities)
+                loss = criterion(torch.multiply(distances,distances),similarities, permutations)
+           '''
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
@@ -88,10 +102,10 @@ outputs_PATH = root_PATH + '/outputs/'
 pairs_PATH = root_PATH + '/closerTriplets/'
 
 # Set MODE
-train_mode = False
+train_mode = True
 eval_mode = False
-cluster_mode = True
-'''
+cluster_mode = False
+
     # We have to use the internal transformations of the pretrained Resnet18
 tfms = transforms.Compose([
     transforms.ToPILImage(),
@@ -114,31 +128,31 @@ split_size = [
             int(len(dataset.img_labels)-(int(0.7*len(dataset.img_labels)) + int(0.2*len(dataset.img_labels))))
             ]
 train_dataset,val_dataset, test_dataset = random_split(dataset,split_size, generator=torch.Generator().manual_seed(23))
-'''
+
 
 
 if(train_mode):
 
     criterion = TripletLoss()
-    resnet50 = models.resnet50(pretrained=True)
-    resnet50.fc = nn.Identity() # Set last layer as Identity
+    resnet18 = models.resnet18(pretrained=True)
+    resnet18.fc = nn.Identity() # Set last layer as Identity
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                                batch_size=64, 
                                                shuffle=True)
 
-    gpu_ready_to_fight(resnet50,criterion)
+    gpu_ready_to_fight(resnet18,criterion)
     learning_rate = 0.1 # baixar
-    optimizer = torch.optim.SGD(resnet50.parameters(),lr = learning_rate, 
+    optimizer = torch.optim.SGD(resnet18.parameters(),lr = learning_rate, 
                                 weight_decay=1e-5, momentum=0.9)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    model = resnet50.to(device)
-    losses = train(model, train_loader, optimizer, criterion, num_epochs=15 , model_name='triplets_resnet50.pt', device=device)
-    with open('triplets_loss_resnet50.npy', 'wb') as f:
+    model = resnet18.to(device)
+    losses = train(model, train_loader, optimizer, criterion, num_epochs=15 , model_name='train_hard_triplets_resnet18.pt', device=device)
+    with open('val_hard_triplets_middle_loss_resnet18.npy', 'wb') as f:
         np.save(f, np.array(losses))
 
 if(eval_mode):
-    model_name =  'triplets_resnet18.pt'
-    output_name = "triplets_resnet18_test_output_001.txt"
+    model_name =  'hard_triplets_resnet18.pt'
+    output_name = "hard_triplets_resnet18_test_output_001.txt"
 
     # Set Device to CUDA and load model
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -265,7 +279,7 @@ if(eval_mode):
                        .format(1, 1, i+1, total_step, loss_avg / nBatches))
 
     
-    with open('triplets_resnet50_test_loss.npy', 'wb') as f:
+    with open('triplets_resnet18_test_loss.npy', 'wb') as f:
         np.save(f, np.array(losses_list))
     
 
